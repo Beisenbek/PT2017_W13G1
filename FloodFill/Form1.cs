@@ -13,14 +13,23 @@ namespace FloodFill
     public partial class Form1 : Form
     {
         State state = State.Pen;
+        Graphics g;
+        Point prevLocation;
+        Queue<Point> q = new Queue<Point>();
+
+        Pen p = new Pen(Color.Black);
+        Color originColor;
+        Color fillColor;
+        Bitmap bmp;
+
 
         public Form1()
         {
             InitializeComponent();
-            g = pictureBox1.CreateGraphics();
+            bmp = new Bitmap(pictureBox1.Width, pictureBox1.Height);
+            pictureBox1.Image = bmp;
+            g = Graphics.FromImage(bmp);
         }
-
-        
 
         private void button1_Click(object sender, EventArgs e)
         {
@@ -39,8 +48,9 @@ namespace FloodFill
                 case State.Pen:
                     if (e.Button == MouseButtons.Left)
                     {
-                        g.DrawLine(new Pen(Color.Black), prevLocation, e.Location);
+                        g.DrawLine(p, prevLocation, e.Location);
                         prevLocation = e.Location;
+                        pictureBox1.Refresh();
                     }
                     break;
                 case State.Fill:
@@ -50,8 +60,6 @@ namespace FloodFill
             }
         }
 
-        Point prevLocation;
-        Queue<Point> q = new Queue<Point>();
 
         private void pictureBox1_MouseDown(object sender, MouseEventArgs e)
         {
@@ -61,67 +69,53 @@ namespace FloodFill
                 case State.Pen:
                     break;
                 case State.Fill:
-                    q.Enqueue(e.Location);
-                    GoFloodFill();
+                    originColor = bmp.GetPixel(e.X, e.Y);
+                    fillColor = p.Color;
+                    F1(e.Location);
                     break;
                 default:
                     break;
             }
         }
 
-        private bool IsGoodPoint(Point p)
+        private void F2(Point point)
         {
-            if (p.X < 0) return false;
-            if (p.Y < 0) return false;
-            if (p.X >= pictureBox1.Width) return false;
-            if (p.Y >= pictureBox1.Height) return false;
-
-
-            return true;
+            SimpePaint.MapFill mf = new SimpePaint.MapFill();
+            mf.Fill(CreateGraphics(), point, fillColor, ref bmp);
         }
+
+        private void F1(Point point)
+        {
+            q.Enqueue(point);
+            GoFloodFill();
+        }
+
+        private void Step(Point p)
+        {
+            if (p.X < 0) return;
+            if (p.Y < 0) return;
+            if (p.X >= pictureBox1.Width) return;
+            if (p.Y >= pictureBox1.Height) return;
+            if (bmp.GetPixel(p.X, p.Y) != originColor) return;
+            bmp.SetPixel(p.X, p.Y, fillColor);
+            q.Enqueue(p);
+        }
+
         private void GoFloodFill()
         {
             while (q.Count > 0)
             {
                 Point cur = q.Dequeue();
 
-                Fill(cur);
-
-                Point p1 = new Point(cur.X, cur.Y + 1);
-                Point p2 = new Point(cur.X + 1, cur.Y);
-                Point p3 = new Point(cur.X - 1, cur.Y);
-                Point p4 = new Point(cur.X, cur.Y - 1);
-
-                if (IsGoodPoint(p1))
-                {
-                    q.Enqueue(p1);
-                    GoFloodFill();
-                }
-                if (IsGoodPoint(p2))
-                {
-                    q.Enqueue(p2);
-                    GoFloodFill();
-                }\
-                if (IsGoodPoint(p3))
-                {
-                    q.Enqueue(p3);
-                    GoFloodFill();
-                }
-                if (IsGoodPoint(p4))
-                {
-                    q.Enqueue(p4);
-                    GoFloodFill();
-                }
+                Step(new Point(cur.X, cur.Y + 1));
+                Step(new Point(cur.X + 1, cur.Y));
+                Step(new Point(cur.X - 1, cur.Y));
+                Step(new Point(cur.X, cur.Y - 1));
             }
+            pictureBox1.Refresh();
+
         }
 
-        Graphics g;
-
-        private void Fill(Point cur)
-        {
-         
-            g.FillRectangle(new Pen(Color.Black).Brush, cur.X,cur.Y, 1, 1);
-        }
     }
 
     enum State
